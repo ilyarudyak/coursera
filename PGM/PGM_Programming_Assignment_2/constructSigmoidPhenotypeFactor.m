@@ -39,58 +39,23 @@ function phenotypeFactor = constructSigmoidPhenotypeFactor(alleleWeights, geneCo
 %   the FULL CPD with no evidence observed)
 
 phenotypeFactor = struct('var', [], 'card', [], 'val', []);
+phenotypeFactor.var = [phenotypeVar, geneCopyVarOneList', geneCopyVarTwoList'];
+numGenes = 2;
+% we assume that number of alleles is the same for both genes
+numAllele = length(alleleWeights{1}); 
+phenotypeFactor.card = [numGenes, repmat(numAllele, 1, 4)];
+phenotypeFactor.val = zeros(1, prod(phenotypeFactor.card));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INSERT YOUR CODE HERE
 % Note that computeSigmoid.m will be useful for this function.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-
-% Fill in phenotypeFactor.var.  This should be a 1-D row vector.
-phenotypeFactor.var = [phenotypeVar, geneCopyVarOneList', geneCopyVarTwoList'];
-% Fill in phenotypeFactor.card.  This should be a 1-D row vector.
-
-numGenes = length(geneCopyVarOneList);
-numAlleles = arrayfun(
-                 @(geneIdx) length(alleleWeights{geneIdx}),
-                 1:numGenes);
-phenotypeFactor.card = [2, numAlleles, numAlleles];
-phenotypeFactor.val = zeros(1, prod(phenotypeFactor.card));
-
-% Use zero-based indexing.
-for valIdx=0:(length(phenotypeFactor.val)-1)
-  %disp("GO");
-  i = valIdx;
-  phenotypePresent = mod(i, 2);
-  i = floor(i/2);
-
-  %disp(phenotypePresent);
-
-  weight = 0;
-
-  % Parent1
-  for geneIdx=1:numGenes
-    numAllelesForGene = length(alleleWeights{geneIdx});
-    alleleIdx = mod(i, numAllelesForGene);
-    %disp(alleleIdx);
-    i = floor(i / numAllelesForGene);
-
-    weight += alleleWeights{geneIdx}(alleleIdx+1);
-  end
-
-  % Parent2
-  for geneIdx=1:numGenes
-    numAllelesForGene = length(alleleWeights{geneIdx});
-    alleleIdx = mod(i, numAllelesForGene);
-    %disp(alleleIdx);
-    i = floor(i / numAllelesForGene);
-
-    weight += alleleWeights{geneIdx}(alleleIdx+1);
-  end
-
-  phenotypeFactor.val(valIdx+1) = exp(weight)/(1+exp(weight));
-  if phenotypePresent == 1
-    phenotypeFactor.val(valIdx+1) = 1 - phenotypeFactor.val(valIdx+1);
-  end
-end
+assignments = IndexToAssignment(1:prod(phenotypeFactor.card), phenotypeFactor.card);
+g1 = assignments(1:2:end, [2, 4]);
+g2 = assignments(1:2:end, [3, 5]);
+f = sum(alleleWeights{1}(g1), 2) + sum(alleleWeights{2}(g2), 2);
+sigmoid = computeSigmoid(f);
+phenotypeFactor.val(1:2:end) = sigmoid;
+phenotypeFactor.val(2:2:end) = 1 - sigmoid;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
